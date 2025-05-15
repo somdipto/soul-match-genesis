@@ -68,6 +68,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Set up auth state change listener
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log('Auth state changed:', event, session?.user?.id);
         const currentUser = session?.user ?? null;
         setUser(currentUser);
         
@@ -92,19 +93,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         provider: 'google',
         options: {
           redirectTo: `${window.location.origin}/auth/callback`,
+          queryParams: {
+            access_type: 'offline', 
+            prompt: 'consent'
+          }
         },
       });
       
       if (error) throw error;
+      
+      console.log('Google sign-in initiated:', data);
+      
+      // Note: The page will redirect, so no need for additional handling here
     } catch (error: any) {
+      console.error('Google sign-in error:', error);
       toast({
         title: "Authentication Failed",
         description: error.message || "Failed to sign in with Google",
         variant: "destructive",
       });
-    } finally {
       setLoading(false);
     }
+    // Note: We don't set loading to false in the finally block because
+    // if successful, the page will redirect and we want to keep loading state true
   };
 
   // Wallet sign in
