@@ -11,6 +11,8 @@ interface AuthContextType {
   loading: boolean;
   signInWithGoogle: () => Promise<void>;
   signInWithWallet: () => Promise<void>;
+  signInWithEmail: (email: string, password: string) => Promise<void>;
+  signUpWithEmail: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
@@ -89,6 +91,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signInWithGoogle = async () => {
     try {
       setLoading(true);
+      console.log('Starting Google OAuth sign in');
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
@@ -116,6 +119,86 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     // Note: We don't set loading to false in the finally block because
     // if successful, the page will redirect and we want to keep loading state true
+  };
+
+  // Email sign in
+  const signInWithEmail = async (email: string, password: string) => {
+    try {
+      setLoading(true);
+      console.log('Signing in with email');
+      
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+      
+      if (error) throw error;
+      
+      if (data.user) {
+        // Fetch user profile after successful login
+        await fetchUserProfile(data.user.id);
+        
+        toast({
+          title: "Signed In",
+          description: "Successfully signed in with email",
+        });
+      }
+    } catch (error: any) {
+      console.error('Email sign-in error:', error);
+      toast({
+        title: "Authentication Failed",
+        description: error.message || "Failed to sign in with email",
+        variant: "destructive",
+      });
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Email sign up
+  const signUpWithEmail = async (email: string, password: string) => {
+    try {
+      setLoading(true);
+      console.log('Signing up with email');
+      
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+        }
+      });
+      
+      if (error) throw error;
+      
+      if (data.user) {
+        // Create an initial profile for the user
+        await supabase.from('profiles').upsert({
+          id: data.user.id,
+          email: email,
+          updated_at: new Date().toISOString(),
+          is_email_verified: false,
+        });
+        
+        await fetchUserProfile(data.user.id);
+        
+        toast({
+          title: "Account Created",
+          description: "Please check your email to verify your account",
+        });
+      }
+    } catch (error: any) {
+      console.error('Email sign-up error:', error);
+      toast({
+        title: "Sign Up Failed",
+        description: error.message || "Failed to create account",
+        variant: "destructive",
+      });
+      throw error;
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Wallet sign in
@@ -157,6 +240,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         description: error.message || "Failed to sign in with wallet",
         variant: "destructive",
       });
+      throw error;
     } finally {
       setLoading(false);
     }
@@ -189,6 +273,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         loading,
         signInWithGoogle,
         signInWithWallet,
+        signInWithEmail,
+        signUpWithEmail,
         signOut,
         refreshProfile,
       }}
