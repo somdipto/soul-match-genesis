@@ -3,8 +3,17 @@ import { createClient } from '@supabase/supabase-js';
 
 // Initialize Supabase client 
 // Note: In a real application, these values should come from environment variables
-const supabaseUrl = 'YOUR_SUPABASE_URL';
-const supabaseAnonKey = 'YOUR_SUPABASE_ANON_KEY';
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://placeholder-project.supabase.co';
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'placeholder-key';
+
+// Show a warning in development if credentials are not set
+if (import.meta.env.DEV && 
+    (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY)) {
+  console.warn(
+    'Warning: Missing Supabase credentials. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY ' +
+    'in your environment variables.'
+  );
+}
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
@@ -104,7 +113,7 @@ export async function sendMessage(conversationId: string, senderId: string, cont
     ]);
   
   // Fix: Add null check for data before accessing index
-  const message = data && data.length > 0 ? data[0] : null;
+  const message = data && Array.isArray(data) && data.length > 0 ? data[0] : null;
   return { message, error };
 }
 
@@ -119,6 +128,6 @@ export async function createReport(report: Omit<any, 'id' | 'created_at' | 'stat
     ]);
   
   // Fix: Add null check for data before accessing index
-  const reportResult = data && data.length > 0 ? data[0] : null;
+  const reportResult = data && Array.isArray(data) && data.length > 0 ? data[0] : null;
   return { report: reportResult, error };
 }
