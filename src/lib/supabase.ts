@@ -112,8 +112,8 @@ export async function sendMessage(conversationId: string, senderId: string, cont
       }
     ]);
   
-  // Fix: Add null check for data before accessing index
-  const message = data && Array.isArray(data) && data.length > 0 ? data[0] : null;
+  // Fix the TypeScript error by not checking length on potentially null data
+  const message = data ? data[0] : null;
   return { message, error };
 }
 
@@ -127,7 +127,7 @@ export async function createReport(report: Omit<any, 'id' | 'created_at' | 'stat
       }
     ]);
   
-  // Fix: Add null check for data before accessing index
-  const reportResult = data && Array.isArray(data) && data.length > 0 ? data[0] : null;
+  // Fix the TypeScript error by not checking length on potentially null data
+  const reportResult = data ? data[0] : null;
   return { report: reportResult, error };
 }
