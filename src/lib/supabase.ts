@@ -103,7 +103,9 @@ export async function sendMessage(conversationId: string, senderId: string, cont
       }
     ]);
   
-  return { message: data?.[0], error };
+  // Fix: Add null check for data before accessing index
+  const message = data && data.length > 0 ? data[0] : null;
+  return { message, error };
 }
 
 export async function createReport(report: Omit<any, 'id' | 'created_at' | 'status'>) {
@@ -116,5 +118,7 @@ export async function createReport(report: Omit<any, 'id' | 'created_at' | 'stat
       }
     ]);
   
-  return { report: data?.[0], error };
+  // Fix: Add null check for data before accessing index
+  const reportResult = data && data.length > 0 ? data[0] : null;
+  return { report: reportResult, error };
 }
