@@ -1,12 +1,14 @@
+
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { User as SupabaseUser } from '@supabase/supabase-js';
-import { supabase, getCurrentUser } from '@/lib/supabase';
+import { User as SupabaseUser, Session } from '@supabase/supabase-js';
+import { supabase } from '@/integrations/supabase/client';
 import { authenticateWithWallet, getCurrentWalletAddress } from '@/lib/web3Auth';
 import { User } from '@/types';
 import { toast } from '@/hooks/use-toast';
 
 interface AuthContextType {
   user: SupabaseUser | null;
+  session: Session | null;
   profile: User | null;
   loading: boolean;
   signInWithGoogle: () => Promise<void>;
@@ -21,6 +23,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<SupabaseUser | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -50,13 +53,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Initialize auth state
   useEffect(() => {
+    // First setup auth state change listener
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      (event, newSession) => {
+        console.log('Auth state changed:', event, newSession?.user?.id);
+        
+        setSession(newSession);
+        setUser(newSession?.user ?? null);
+        
+        // Use setTimeout to avoid potential Supabase deadlock
+        if (newSession?.user?.id) {
+          setTimeout(() => {
+            fetchUserProfile(newSession.user.id);
+          }, 0);
+        } else {
+          setProfile(null);
+        }
+      }
+    );
+
+    // Then check for existing session
     const initAuth = async () => {
       try {
-        const { user: currentUser } = await getCurrentUser();
-        setUser(currentUser || null);
+        // Check for existing session
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
         
-        if (currentUser?.id) {
-          await fetchUserProfile(currentUser.id);
+        setSession(currentSession);
+        setUser(currentSession?.user || null);
+        
+        if (currentSession?.user?.id) {
+          await fetchUserProfile(currentSession.user.id);
         }
       } catch (error) {
         console.error('Error initializing auth:', error);
@@ -66,21 +92,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
 
     initAuth();
-
-    // Set up auth state change listener
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('Auth state changed:', event, session?.user?.id);
-        const currentUser = session?.user ?? null;
-        setUser(currentUser);
-        
-        if (currentUser?.id) {
-          await fetchUserProfile(currentUser.id);
-        } else {
-          setProfile(null);
-        }
-      }
-    );
 
     return () => {
       authListener?.subscription.unsubscribe();
@@ -117,8 +128,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
       setLoading(false);
     }
-    // Note: We don't set loading to false in the finally block because
-    // if successful, the page will redirect and we want to keep loading state true
   };
 
   // Email sign in
@@ -253,7 +262,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
       setUser(null);
+      setSession(null);
       setProfile(null);
+      toast({
+        title: "Signed Out",
+        description: "You have been signed out successfully",
+      });
     } catch (error: any) {
       toast({
         title: "Sign Out Failed",
@@ -269,6 +283,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     <AuthContext.Provider
       value={{
         user,
+        session,
         profile,
         loading,
         signInWithGoogle,

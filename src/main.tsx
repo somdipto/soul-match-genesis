@@ -9,16 +9,6 @@ const handleAuthCallback = async () => {
     try {
       console.log('Processing auth callback...');
       
-      // Get the URL hash and extract the access token if present
-      const hashParams = new URLSearchParams(window.location.hash.substring(1));
-      const accessToken = hashParams.get('access_token');
-      
-      if (accessToken) {
-        console.log('Auth callback received access token');
-      } else {
-        console.log('Processing auth callback with query params');
-      }
-      
       // Remove the hash from the URL to prevent issues
       if (window.location.hash) {
         history.replaceState(null, document.title, window.location.pathname + window.location.search);

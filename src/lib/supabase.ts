@@ -1,21 +1,8 @@
-
 import { createClient } from '@supabase/supabase-js';
+import { supabase as supabaseClient } from '@/integrations/supabase/client';
 
-// Initialize Supabase client 
-// Note: In a real application, these values should come from environment variables
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://placeholder-project.supabase.co';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'placeholder-key';
-
-// Show a warning in development if credentials are not set
-if (import.meta.env.DEV && 
-    (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY)) {
-  console.warn(
-    'Warning: Missing Supabase credentials. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY ' +
-    'in your environment variables.'
-  );
-}
-
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Re-export the supabase client from the integration
+export const supabase = supabaseClient;
 
 export async function signInWithGoogle() {
   const { data, error } = await supabase.auth.signInWithOAuth({
@@ -23,7 +10,7 @@ export async function signInWithGoogle() {
     options: {
       redirectTo: `${window.location.origin}/auth/callback`,
       queryParams: {
-        access_type: 'offline', // This enables refresh token
+        access_type: 'offline',
         prompt: 'consent'
       }
     },
