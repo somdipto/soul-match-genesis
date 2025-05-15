@@ -26,14 +26,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Fetch user profile
   const fetchUserProfile = async (userId: string) => {
     try {
-      const { data, error } = await supabase
+      const { profile, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
         .single();
       
       if (error) throw error;
-      setProfile(data as unknown as User);
+      setProfile(profile as unknown as User);
     } catch (error) {
       console.error('Error fetching user profile:', error);
       setProfile(null);
@@ -114,7 +114,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(true);
       const { user: walletUser, error } = await authenticateWithWallet();
       
-      if (error) throw error;
+      if (error) {
+        throw new Error(error.message || "Failed to authenticate with wallet");
+      }
       
       if (walletUser) {
         // Create or update profile with wallet address
@@ -129,7 +131,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             }, {
               onConflict: 'id',
             });
+            
+          // Fetch the user profile again to update state
+          await fetchUserProfile(walletUser.id);
         }
+        
+        toast({
+          title: "Wallet Connected",
+          description: "Successfully authenticated with wallet",
+        });
       }
     } catch (error: any) {
       toast({

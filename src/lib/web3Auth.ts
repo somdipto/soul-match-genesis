@@ -4,7 +4,9 @@ import { supabase } from './supabase';
 
 // Function to check if MetaMask is installed
 export function isMetaMaskInstalled(): boolean {
-  return typeof window !== 'undefined' && window.ethereum !== undefined;
+  return typeof window !== 'undefined' && 
+         typeof window.ethereum !== 'undefined' && 
+         window.ethereum.isMetaMask === true;
 }
 
 // Function to get a Web3 provider
@@ -13,8 +15,18 @@ export async function getWeb3Provider() {
     throw new Error('MetaMask is not installed');
   }
   
-  await window.ethereum.request({ method: 'eth_requestAccounts' });
-  return new ethers.BrowserProvider(window.ethereum);
+  try {
+    // Request account access
+    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+    if (!accounts || accounts.length === 0) {
+      throw new Error('No accounts found');
+    }
+    
+    return new ethers.BrowserProvider(window.ethereum);
+  } catch (error: any) {
+    console.error('Error connecting to MetaMask:', error);
+    throw new Error(error.message || 'Failed to connect to MetaMask');
+  }
 }
 
 // Function to get current wallet address
@@ -48,10 +60,15 @@ export async function signMessage(message: string): Promise<string | null> {
 // Function to authenticate with wallet
 export async function authenticateWithWallet(): Promise<{ user: any, error: any }> {
   try {
+    // Check if MetaMask is installed
+    if (!isMetaMaskInstalled()) {
+      throw new Error('MetaMask is not installed. Please install MetaMask extension and try again.');
+    }
+    
     // Get wallet address
     const walletAddress = await getCurrentWalletAddress();
     if (!walletAddress) {
-      throw new Error('No wallet address found');
+      throw new Error('No wallet address found. Please connect your wallet and try again.');
     }
     
     // Generate a nonce (in a real app, this would come from the server)
@@ -63,21 +80,24 @@ export async function authenticateWithWallet(): Promise<{ user: any, error: any 
     // Sign the message
     const signature = await signMessage(message);
     if (!signature) {
-      throw new Error('Failed to sign message');
+      throw new Error('Failed to sign message. Please try again.');
     }
     
+    // Create a deterministic password from the signature (for demo purposes)
+    const password = ethers.keccak256(ethers.toUtf8Bytes(signature)).slice(0, 42);
+    
     // Authenticate with Supabase using the wallet address and signature
-    // In a real app, you'd validate the signature on the server side
     const { data, error } = await supabase.auth.signInWithPassword({
       email: `${walletAddress.toLowerCase()}@wallet.datex.app`,
-      password: signature.substring(0, 20), // Using part of the signature as password for demo
+      password,
     });
     
     if (error && error.status === 400) {
       // User doesn't exist, sign up
+      console.log("User doesn't exist, signing up...");
       const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email: `${walletAddress.toLowerCase()}@wallet.datex.app`,
-        password: signature.substring(0, 20),
+        password,
         options: {
           data: {
             wallet_address: walletAddress,
@@ -85,12 +105,23 @@ export async function authenticateWithWallet(): Promise<{ user: any, error: any 
         },
       });
       
+      // Create profile for new user
+      if (signUpData.user) {
+        await supabase
+          .from('profiles')
+          .upsert({
+            id: signUpData.user.id,
+            wallet_address: walletAddress,
+            updated_at: new Date().toISOString(),
+          });
+      }
+      
       return { user: signUpData.user, error: signUpError };
     }
     
-    return { user: data.user, error };
-  } catch (error) {
+    return { user: data?.user || null, error };
+  } catch (error: any) {
     console.error('Error authenticating with wallet:', error);
-    return { user: null, error };
+    return { user: null, error: { message: error.message || 'An error occurred during wallet authentication' } };
   }
 }
