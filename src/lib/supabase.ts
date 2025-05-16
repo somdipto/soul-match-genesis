@@ -1,8 +1,10 @@
+
 import { createClient } from '@supabase/supabase-js';
 import { supabase as supabaseClient } from '@/integrations/supabase/client';
+import { Database } from '@/types/database.types';
 
 // Re-export the supabase client from the integration
-export const supabase = supabaseClient;
+export const supabase = supabaseClient as ReturnType<typeof createClient<Database>>;
 
 export async function signInWithGoogle() {
   const { data, error } = await supabase.auth.signInWithOAuth({
@@ -124,7 +126,6 @@ export async function sendMessage(conversationId: string, senderId: string, cont
       }
     ]);
   
-  // Fix the TypeScript error by not checking length on potentially null data
   const message = data ? data[0] : null;
   return { message, error };
 }
@@ -139,7 +140,6 @@ export async function createReport(report: Omit<any, 'id' | 'created_at' | 'stat
       }
     ]);
   
-  // Fix the TypeScript error by not checking length on potentially null data
   const reportResult = data ? data[0] : null;
   return { report: reportResult, error };
 }

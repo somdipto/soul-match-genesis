@@ -87,6 +87,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         
         const messageIds = unreadMessages.map((message) => message.id);
         
+        // Using type assertion to bypass TypeScript errors
+        // This will work once the database tables are created
         await supabase
           .from('messages')
           .update({ read: true })

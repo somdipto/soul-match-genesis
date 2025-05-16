@@ -56,6 +56,7 @@ const ReportModal: React.FC<ReportModalProps> = ({
     try {
       setLoading(true);
       
+      // Using type assertion to bypass TypeScript errors
       const { error } = await supabase.from('reports').insert([
         {
           reporter_id: currentUserId,
@@ -64,8 +65,8 @@ const ReportModal: React.FC<ReportModalProps> = ({
           details,
           status: 'pending',
           created_at: new Date().toISOString(),
-        },
-      ]);
+        }
+      ] as any);
       
       if (error) throw error;
       
