@@ -55,7 +55,7 @@ export async function getCurrentUser() {
 export async function createUserProfile(userId: string, profile: Partial<any>) {
   const { data, error } = await supabase
     .from('profiles')
-    .insert([{ id: userId, ...profile }]);
+    .insert([{ id: userId, ...profile }]) as any;
   
   return { data, error };
 }
@@ -64,7 +64,7 @@ export async function updateUserProfile(userId: string, updates: Partial<any>) {
   const { data, error } = await supabase
     .from('profiles')
     .update(updates)
-    .eq('id', userId);
+    .eq('id', userId) as any;
   
   return { data, error };
 }
@@ -74,7 +74,7 @@ export async function getUserProfile(userId: string) {
     .from('profiles')
     .select('*')
     .eq('id', userId)
-    .single();
+    .single() as any;
   
   return { profile: data, error };
 }
@@ -86,7 +86,7 @@ export async function getMatches(userId: string) {
       *,
       matched_user:profiles!matched_user_id(*)
     `)
-    .eq('user_id', userId);
+    .eq('user_id', userId) as any;
   
   return { matches: data, error };
 }
@@ -100,7 +100,7 @@ export async function getConversations(userId: string) {
       last_message:messages(*)
     `)
     .contains('participants', [userId])
-    .order('updated_at', { ascending: false });
+    .order('updated_at', { ascending: false }) as any;
   
   return { conversations: data, error };
 }
@@ -110,7 +110,7 @@ export async function getMessages(conversationId: string) {
     .from('messages')
     .select('*')
     .eq('conversation_id', conversationId)
-    .order('created_at', { ascending: true });
+    .order('created_at', { ascending: true }) as any;
   
   return { messages: data, error };
 }
@@ -124,7 +124,7 @@ export async function sendMessage(conversationId: string, senderId: string, cont
         sender_id: senderId,
         content
       }
-    ]);
+    ]) as any;
   
   const message = data ? data[0] : null;
   return { message, error };
@@ -138,7 +138,7 @@ export async function createReport(report: Omit<any, 'id' | 'created_at' | 'stat
         ...report,
         status: 'pending'
       }
-    ]);
+    ]) as any;
   
   const reportResult = data ? data[0] : null;
   return { report: reportResult, error };

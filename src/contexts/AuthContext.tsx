@@ -31,11 +31,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const fetchUserProfile = async (userId: string) => {
     try {
       // Using type assertion to bypass TypeScript errors
-      const { data, error } = await supabase
+      const { data, error } = await (supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
-        .single();
+        .single() as any);
       
       if (error) throw error;
       setProfile(data as unknown as User);
@@ -184,12 +184,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       if (data.user) {
         // Create an initial profile for the user using type assertion to bypass TypeScript errors
-        await supabase.from('profiles').upsert({
-          id: data.user.id,
-          email: email,
-          updated_at: new Date().toISOString(),
-          is_email_verified: false,
-        } as any);
+        await (supabase
+          .from('profiles')
+          .upsert({
+            id: data.user.id,
+            email: email,
+            updated_at: new Date().toISOString(),
+            is_email_verified: false,
+          } as any) as any);
         
         await fetchUserProfile(data.user.id);
         
@@ -226,7 +228,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const walletAddress = await getCurrentWalletAddress();
         if (walletAddress) {
           // Using type assertion to bypass TypeScript errors
-          await supabase
+          await (supabase
             .from('profiles')
             .upsert({
               id: walletUser.id,
@@ -234,7 +236,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               updated_at: new Date().toISOString(),
             } as any, {
               onConflict: 'id',
-            });
+            }) as any);
             
           // Fetch the user profile again to update state
           await fetchUserProfile(walletUser.id);
