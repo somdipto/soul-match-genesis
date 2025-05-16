@@ -1,7 +1,7 @@
 
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { User as SupabaseUser, Session } from '@supabase/supabase-js';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/lib/supabase';
 import { authenticateWithWallet, getCurrentWalletAddress } from '@/lib/web3Auth';
 import { User } from '@/types';
 import { toast } from '@/hooks/use-toast';
@@ -31,11 +31,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const fetchUserProfile = async (userId: string) => {
     try {
       // Using type assertion to bypass TypeScript errors
-      const { data, error } = await (supabase
+      const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
-        .single() as any);
+        .single() as any;
       
       if (error) throw error;
       setProfile(data as unknown as User);
@@ -54,6 +54,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Initialize auth state
   useEffect(() => {
+    console.log("AuthProvider: Setting up auth listener");
+    
     // First setup auth state change listener
     const { data: authListener } = supabase.auth.onAuthStateChange(
       (event, newSession) => {
@@ -65,7 +67,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Use setTimeout to avoid potential Supabase deadlock
         if (newSession?.user?.id) {
           setTimeout(() => {
-            fetchUserProfile(newSession.user.id);
+            fetchUserProfile(newSession.user!.id);
           }, 0);
         } else {
           setProfile(null);
@@ -78,6 +80,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         // Check for existing session
         const { data: { session: currentSession } } = await supabase.auth.getSession();
+        console.log("AuthProvider: Initial session check", currentSession?.user?.id);
         
         setSession(currentSession);
         setUser(currentSession?.user || null);
@@ -184,14 +187,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       if (data.user) {
         // Create an initial profile for the user using type assertion to bypass TypeScript errors
-        await (supabase
-          .from('profiles')
-          .upsert({
-            id: data.user.id,
-            email: email,
-            updated_at: new Date().toISOString(),
-            is_email_verified: false,
-          } as any) as any);
+        await supabase.from('profiles').upsert({
+          id: data.user.id,
+          email: email,
+          updated_at: new Date().toISOString(),
+          is_email_verified: false,
+        } as any) as any;
         
         await fetchUserProfile(data.user.id);
         
@@ -228,7 +229,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const walletAddress = await getCurrentWalletAddress();
         if (walletAddress) {
           // Using type assertion to bypass TypeScript errors
-          await (supabase
+          await supabase
             .from('profiles')
             .upsert({
               id: walletUser.id,
@@ -236,7 +237,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               updated_at: new Date().toISOString(),
             } as any, {
               onConflict: 'id',
-            }) as any);
+            }) as any;
             
           // Fetch the user profile again to update state
           await fetchUserProfile(walletUser.id);
