@@ -11,7 +11,8 @@ import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Mail, Lock, Eye, EyeOff, LogIn, User, Google } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, LogIn, User } from 'lucide-react';
+import GoogleIcon from '@/components/icons/GoogleIcon';
 
 const emailSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address" }),
@@ -229,7 +230,7 @@ const AuthCard = () => {
                     </>
                   ) : (
                     <>
-                      <Google className="w-5 h-5 mr-2" />
+                      <GoogleIcon className="w-5 h-5 mr-2" />
                       Continue with Google
                     </>
                   )}
